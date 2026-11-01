@@ -242,6 +242,7 @@ const lugar = '';                         // sin categorías: una sola lista (Ge
 let items = lsGet('items', []);          // cache de la lista
 let cola = lsGet('cola', []);            // operaciones sin enviar
 let propuesta = null;                    // {texto, items:[{producto,cantidad,lugar,nota}]}
+let enCurso = 0;                         // audios transcribiéndose (se puede grabar otro mientras tanto)
 let ocultos = new Set();                 // ids borrados con deshacer en curso
 let animarFichas = false;
 
@@ -457,7 +458,10 @@ function pintarPropuesta() {
   animarFichas = false;
 }
 function mostrarPropuesta(texto, lista) {
-  propuesta = { texto, items: lista.map((i) => ({ producto: i.producto || '', cantidad: i.cantidad || '', lugar: LUGARES.indexOf(i.lugar) >= 0 ? i.lugar : '', nota: i.nota || '' })) };
+  const nuevos = lista.map((i) => ({ producto: i.producto || '', cantidad: i.cantidad || '', lugar: LUGARES.indexOf(i.lugar) >= 0 ? i.lugar : '', nota: i.nota || '' }));
+  // Si ya había fichas de un audio anterior, se suman (varios audios seguidos = una sola lista para guardar).
+  if (propuesta) propuesta = { texto: [propuesta.texto, texto].filter(Boolean).join(' / '), items: propuesta.items.concat(nuevos) };
+  else propuesta = { texto, items: nuevos };
   animarFichas = true;
   pintarPropuesta();
 }
@@ -483,7 +487,6 @@ async function empezar() {
   rec.start(1000);
   tIni = Date.now();
   $('mic').classList.add('rec');
-  propuesta = null; pintarPropuesta();
   $('tiempo').textContent = '0:00'; $('tiempo').classList.remove('hide');
   setEstado('Tocá para terminar');
   timer = setInterval(() => {
@@ -512,6 +515,7 @@ function parar() {
   $('mic').classList.remove('rec');
   $('tiempo').classList.add('hide');
   rec.stop();
+  setEstado('Transcribiendo… ya podés grabar otro');
   stream.getTracks().forEach((t) => t.stop());
   if (ctxA) { try { ctxA.close(); } catch (e) { /* nada */ } ctxA = null; }
 }
@@ -532,13 +536,15 @@ function aBase64(blob) {
   });
 }
 async function transcribirBlob(blob, lug, guardarSiFalla) {
-  setEstado('Pensando…');
+  // Mientras se graba otro audio los mensajes van en un aviso, para no pisar "Tocá para terminar".
+  const setEstado = (t) => { if (rec) avisoTemp(t); else $('estado').textContent = t; };
+  if (!rec) setEstado(enCurso ? 'Transcribiendo… ya podés grabar otro' : 'Pensando…');
+  enCurso++;
   $('pensando').classList.remove('hide');
-  $('mic').disabled = true;
   try {
     const j = await apiPost({ accion: 'transcribir', audio: await aBase64(blob), mime: blob.type || 'audio/webm', lugar: lug });
     mostrarPropuesta(j.texto, j.items || []);
-    setEstado('Revisá y guardá');
+    if (!rec) setEstado(enCurso > 1 ? 'Revisá y guardá (falta transcribir otro audio)' : 'Revisá y guardá');
     return true;
   } catch (e) {
     if (e instanceof ErrRed && guardarSiFalla) {
@@ -550,7 +556,7 @@ async function transcribirBlob(blob, lug, guardarSiFalla) {
     } else if (e instanceof ErrRed) setEstado('Sigue sin señal.');
     else setEstado('No pude entender el audio: ' + e.message);
     return false;
-  } finally { $('pensando').classList.add('hide'); $('mic').disabled = false; pintarAvisos(); }
+  } finally { enCurso--; if (!enCurso) $('pensando').classList.add('hide'); pintarAvisos(); }
 }
 
 // ---------- Audios pendientes (IndexedDB) ----------
