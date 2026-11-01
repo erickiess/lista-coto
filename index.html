@@ -544,6 +544,9 @@ async function transcribirBlob(blob, lug, guardarSiFalla) {
     if (e instanceof ErrRed && guardarSiFalla) {
       try { await idbGuardar({ blob, lugar: lug, t: Date.now() }); setEstado('Sin señal: guardé el audio en el celular. Cuando vuelva la conexión tocá “Transcribir pendientes”.'); }
       catch (e2) { setEstado('Sin señal y no pude guardar el audio. Probá de nuevo cuando haya conexión.'); }
+    } else if (/saturado/.test(e.message) && guardarSiFalla) {
+      try { await idbGuardar({ blob, lugar: lug, t: Date.now() }); setEstado('Gemini está saturado: guardé el audio. Tocá “Transcribir pendientes” en un rato.'); }
+      catch (e2) { setEstado(e.message); }
     } else if (e instanceof ErrRed) setEstado('Sigue sin señal.');
     else setEstado('No pude entender el audio: ' + e.message);
     return false;

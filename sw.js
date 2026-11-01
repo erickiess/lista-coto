@@ -1,5 +1,5 @@
 // Service worker: shell en cache; index.html network-first
-const CACHE = 'lista-voz-v4';
+const CACHE = 'lista-voz-v5';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (e) => {
