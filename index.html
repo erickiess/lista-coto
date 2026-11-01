@@ -115,7 +115,14 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 .item .x{opacity:.55}
 .btnHist{display:block;width:100%;margin:18px 0 8px;min-height:48px;border-radius:16px;border:1.5px dashed var(--bd);background:none;color:var(--tx2);font:inherit;font-weight:600}
 .btnHist:active{background:var(--card2)}
-.hdia{margin:18px 0 4px}
+.compra{background:var(--card2);border-radius:18px;padding:4px 10px;margin:12px 0}
+.compra summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:52px;padding:0 4px;cursor:pointer}
+.compra summary::-webkit-details-marker{display:none}
+.compra summary::after{content:"▾";color:var(--tx2);transition:transform .2s}
+.compra[open] summary::after{transform:rotate(180deg)}
+.compra .ct{flex:1;font-weight:700}
+.compra .cn{color:var(--tx2);font-size:13px;flex:none}
+.compra[open]{padding-bottom:8px}
 .hitem{display:flex;align-items:center;gap:8px;padding:6px 4px 6px 14px;margin:6px 0;background:var(--card);border:1px solid var(--bd);border-radius:14px;min-height:52px}
 .hitem .t{flex:1;min-width:0}
 .hitem .nom{font-weight:600;word-break:break-word}
@@ -408,16 +415,26 @@ function cerrarHistorial() { $('pHistorial').classList.add('hide'); }
 function pintarHistorial() {
   const el = $('historial');
   if (!historial.length) { el.innerHTML = '<div class="vacioG"><div class="big">🧾</div><p>Todavía no hay compras</p><small>Lo que se compra de la lista queda acá.</small></div>'; return; }
-  let h = '', dia = '';
+  // una compra = lo que se marcó como comprado junto (viene ordenado del más nuevo al más viejo)
+  const compras = [];
   historial.forEach((i, n) => {
-    const d = new Date(i.comprado_el);
-    const etq = isNaN(d) ? 'Sin fecha' : d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    if (etq !== dia) { dia = etq; h += '<div class="sub hdia">Comprado el ' + esc(etq) + '</div>'; }
-    h += '<div class="hitem"><div class="t"><span class="nom">' + esc(i.producto) + '</span>' + (i.cantidad ? '<span class="q">' + esc(i.cantidad) + '</span>' : '') +
-      '<div class="m">' + esc([i.quien, i.nota].filter(Boolean).join(' · ')) + '</div></div>' +
-      '<button class="re" data-re="' + n + '">+ Anotar</button></div>';
+    const t = new Date(i.comprado_el).getTime() || 0;
+    const ult = compras[compras.length - 1];
+    if (ult && Math.abs(ult.t - t) < 3 * 3600e3) ult.items.push(n); else compras.push({ t, items: [n] });
   });
-  el.innerHTML = h;
+  el.innerHTML = compras.map((c, k) => {
+    const d = new Date(c.t);
+    const otroAnio = d.getFullYear() !== new Date().getFullYear();
+    const fecha = c.t ? d.toLocaleDateString('es-AR', Object.assign({ day: 'numeric', month: 'long' }, otroAnio ? { year: 'numeric' } : {})) : 'sin fecha';
+    const filas = c.items.map((n) => {
+      const i = historial[n];
+      return '<div class="hitem"><div class="t"><span class="nom">' + esc(i.producto) + '</span>' + (i.cantidad ? '<span class="q">' + esc(i.cantidad) + '</span>' : '') +
+        '<div class="m">' + esc([i.quien, i.nota].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<button class="re" data-re="' + n + '">+ Anotar</button></div>';
+    }).join('');
+    return '<details class="compra"' + (k === 0 ? ' open' : '') + '><summary><span class="ct">Compra del ' + esc(fecha) + '</span>' +
+      '<span class="cn">' + c.items.length + (c.items.length === 1 ? ' producto' : ' productos') + '</span></summary>' + filas + '</details>';
+  }).join('');
 }
 
 // ---------- Deslizar para borrar ----------
