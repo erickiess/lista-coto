@@ -388,7 +388,7 @@ function pintarLista() {
       const quien = [i.quien, tiempoRel(i.fecha)].filter(Boolean).join(' · ');
       const meta = (i.local ? SVG_NUBE : '') + '<span>' + esc(quien) + (i.local ? ' · sin enviar' : '') + (i.nota ? ' · ' + esc(i.nota) : '') + '</span>';
       h += '<div class="item' + (i.local ? ' local' : '') + '"><div class="fg"><div class="t"><span class="nom">' + esc(i.producto) + '</span>' +
-        (i.cantidad ? '<span class="q">× ' + esc(i.cantidad) + '</span>' : '') + '<div class="m">' + meta + '</div></div>' +
+        (i.cantidad ? '<span class="q">' + (/^\d+([.,]\d+)?$/.test(String(i.cantidad).trim()) ? '× ' : '') + esc(i.cantidad) + '</span>' : '') + '<div class="m">' + meta + '</div></div>' +
         '<button class="x" data-del="' + esc(i.id) + '" aria-label="Borrar">✕</button></div></div>';
     });
   });
