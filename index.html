@@ -46,15 +46,6 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 .aviso svg{width:18px;height:18px;flex:none}
 .aviso button{margin-left:auto;border:1.5px solid currentColor;background:none;border-radius:10px;padding:8px 12px;font-weight:600;min-height:44px;font-size:14px}
 
-/* lugares */
-.lugares{display:flex;gap:10px;overflow-x:auto;padding:12px 16px 14px;margin:0 -16px;scrollbar-width:none;scroll-snap-type:x proximity;scroll-padding-left:16px}
-.lugares::-webkit-scrollbar{display:none}
-.chip{flex:0 0 auto;position:relative;width:78px;min-height:76px;padding:10px 4px 8px;border-radius:var(--r);border:1.5px solid var(--bd);background:var(--card);box-shadow:var(--sh);display:flex;flex-direction:column;align-items:center;gap:2px;scroll-snap-align:start;transition:background-color .2s,border-color .2s,color .2s,transform .15s}
-.chip .e{font-size:28px;line-height:1.1}
-.chip .l{font-size:12px;font-weight:600;color:var(--tx2)}
-.chip .b{position:absolute;top:-6px;right:-4px;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--tom);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;border:2px solid var(--bg)}
-.chip.on{background:var(--ac);border-color:var(--ac);transform:translateY(-2px)}
-.chip.on .l{color:var(--acx)}
 
 /* micrófono */
 .mic-wrap{display:flex;flex-direction:column;align-items:center;padding:8px 0 4px}
@@ -85,12 +76,12 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 .entendi i{font-style:italic}
 .ficha{display:flex;align-items:center;gap:6px;padding:8px 8px 8px 12px;margin:8px 0;background:var(--card2);border-radius:16px;flex-wrap:wrap;animation:ent .32s ease both;animation-delay:calc(var(--n,0) * 60ms)}
 .ficha input,.ficha select{font:inherit;color:inherit;border:0;background:transparent;min-height:44px;padding:0 6px;border-radius:10px}
-.ficha input.n{flex:1 1 calc(100% - 56px);min-width:0;order:0;font-weight:600;font-size:16px}
+.ficha input.n{flex:1 1 auto;min-width:0;order:0;font-weight:600;font-size:16px}
 .ficha input.c{width:62px;flex:none;text-align:center;background:var(--ac2);color:var(--ac);font-weight:700;border-radius:999px;min-height:36px;font-size:14px}
 .ficha input.c::placeholder{color:var(--tx2);font-weight:500}
 .ficha select{max-width:112px;font-size:14px;color:var(--tx2);appearance:none;-webkit-appearance:none;background:var(--card);border-radius:999px;padding:0 12px;min-height:36px}
 .ficha input:focus,.ficha select:focus{outline:2px solid var(--ac);outline-offset:1px}
-.ficha .x{order:1}.ficha input.c{order:2}.ficha select{order:3}
+.ficha input.c{order:1}.ficha .x{order:2}
 .x{background:none;border:0;color:var(--tx2);min-width:44px;min-height:44px;border-radius:12px;font-size:16px;flex:none}
 .x:active{background:var(--tom2);color:var(--tom)}
 .fila{display:flex;gap:10px;margin-top:14px}
@@ -176,8 +167,6 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 
   <div id="avisos"></div>
 
-  <div class="lugares" id="lugares"></div>
-
   <div class="mic-wrap">
     <div class="mic-box">
       <button id="mic" aria-label="Grabar"><span class="nivel" id="nivel"></span>
@@ -243,8 +232,6 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 'use strict';
 // ---------- Constantes ----------
 const LUGARES = ['Alacena', 'Heladera', 'Freezer', 'Limpieza', 'Baño', 'Otros'];
-const EMOJI = { Alacena: '🥫', Heladera: '🧊', Freezer: '❄️', Limpieza: '🧽', 'Baño': '🧴', Otros: '🛒' };
-const IDLE = { Alacena: 'Abrí la alacena y decí lo que falta', Heladera: 'Abrí la heladera y decí lo que falta', Freezer: 'Abrí el freezer y decí lo que falta', Limpieza: 'Mirá los productos de limpieza y decí lo que falta', 'Baño': 'Mirá el baño y decí lo que falta', Otros: 'Decí lo que falta' };
 const MAX_SEG = 120;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -254,8 +241,7 @@ const SVG_NUBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 function lsGet(k, def) { try { const v = localStorage.getItem(k); return v == null ? def : JSON.parse(v); } catch (e) { return def; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin storage */ } }
 let cfg = lsGet('cfg', { u: '', k: '', q: '' });
-let lugar = lsGet('lugar', 'Alacena');
-if (LUGARES.indexOf(lugar) < 0) lugar = 'Alacena';
+const lugar = '';                         // sin categorías: una sola lista (Gemini guarda el lugar por producto)
 let items = lsGet('items', []);          // cache de la lista
 let cola = lsGet('cola', []);            // operaciones sin enviar
 let propuesta = null;                    // {texto, items:[{producto,cantidad,lugar,nota}]}
@@ -376,21 +362,15 @@ function pintarLista() {
   const el = $('lista');
   const vis = items.filter((i) => !ocultos.has(i.id));
   pintarCabecera(vis.length);
-  pintarLugares();
   if (!configurado()) { el.innerHTML = '<div class="vacioG"><div class="big">⚙️</div><p>Falta configurar</p><small>Tocá el ícono de ajustes arriba a la derecha.</small></div>'; return; }
   if (!vis.length) { el.innerHTML = '<div class="vacioG"><div class="big">🧺</div><p>No falta nada. ¡Despensa llena!</p></div>'; return; }
-  let h = '';
-  LUGARES.concat(Array.from(new Set(vis.map((i) => i.lugar))).filter((l) => LUGARES.indexOf(l) < 0)).forEach((l) => {
-    const g = vis.filter((i) => i.lugar === l);
-    if (!g.length) return;
-    h += '<div class="grupo"><span class="e">' + (EMOJI[l] || '🛒') + '</span>' + esc(l) + '<span class="k">' + g.length + '</span></div>';
-    g.forEach((i) => {
+  let h = '<div class="grupo"><span class="e">🛒</span>Lo que falta<span class="k">' + vis.length + '</span></div>';
+  vis.forEach((i) => {
       const quien = [i.quien, tiempoRel(i.fecha)].filter(Boolean).join(' · ');
       const meta = (i.local ? SVG_NUBE : '') + '<span>' + esc(quien) + (i.local ? ' · sin enviar' : '') + (i.nota ? ' · ' + esc(i.nota) : '') + '</span>';
       h += '<div class="item' + (i.local ? ' local' : '') + '"><div class="fg"><div class="t"><span class="nom">' + esc(i.producto) + '</span>' +
         (i.cantidad ? '<span class="q">' + (/^\d+([.,]\d+)?$/.test(String(i.cantidad).trim()) ? '× ' : '') + esc(i.cantidad) + '</span>' : '') + '<div class="m">' + meta + '</div></div>' +
         '<button class="x" data-del="' + esc(i.id) + '" aria-label="Borrar">✕</button></div></div>';
-    });
   });
   el.innerHTML = h;
 }
@@ -476,12 +456,11 @@ function pintarPropuesta() {
     '<div class="ficha" data-n="' + k + '" style="' + (animarFichas ? '--n:' + k : 'animation:none') + '">' +
     '<input class="n" data-f="producto" value="' + esc(it.producto) + '" aria-label="Producto">' +
     '<input class="c" data-f="cantidad" value="' + esc(it.cantidad) + '" placeholder="Cant." aria-label="Cantidad">' +
-    '<select data-f="lugar" aria-label="Lugar">' + LUGARES.map((l) => '<option' + (l === it.lugar ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
     '<button class="x" data-quitar="' + k + '" aria-label="Sacar">✕</button></div>').join('');
   animarFichas = false;
 }
 function mostrarPropuesta(texto, lista) {
-  propuesta = { texto, items: lista.map((i) => ({ producto: i.producto || '', cantidad: i.cantidad || '', lugar: LUGARES.indexOf(i.lugar) >= 0 ? i.lugar : lugar, nota: i.nota || '' })) };
+  propuesta = { texto, items: lista.map((i) => ({ producto: i.producto || '', cantidad: i.cantidad || '', lugar: LUGARES.indexOf(i.lugar) >= 0 ? i.lugar : '', nota: i.nota || '' })) };
   animarFichas = true;
   pintarPropuesta();
 }
@@ -493,7 +472,7 @@ function elegirMime() {
   if (!window.MediaRecorder) return '';
   return c.find((m) => MediaRecorder.isTypeSupported(m)) || '';
 }
-function textoReposo() { return IDLE[lugar] || 'Decí lo que falta'; }
+function textoReposo() { return 'Abrí la alacena, la heladera o el freezer y decí lo que falta'; }
 async function empezar() {
   if (!configurado()) { abrirAjustes(); return; }
   if (!navigator.mediaDevices || !window.MediaRecorder) { setEstado('Este navegador no puede grabar. Usá Chrome.'); return; }
@@ -637,17 +616,6 @@ function toast(texto, boton, alBoton, ms, alCerrar) {
 }
 
 // ---------- Eventos ----------
-function pintarLugares() {
-  const cuenta = {};
-  items.filter((i) => !ocultos.has(i.id)).forEach((i) => { cuenta[i.lugar] = (cuenta[i.lugar] || 0) + 1; });
-  $('lugares').innerHTML = LUGARES.map((l) => '<button class="chip' + (l === lugar ? ' on' : '') + '" data-l="' + l + '"><span class="e">' + EMOJI[l] + '</span><span class="l">' + l + '</span>' +
-    (cuenta[l] ? '<span class="b">' + cuenta[l] + '</span>' : '') + '</button>').join('');
-}
-$('lugares').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-l]'); if (!b) return;
-  lugar = b.dataset.l; lsSet('lugar', lugar); pintarLugares();
-  if (!rec && !propuesta && $('pensando').classList.contains('hide')) setEstado(textoReposo());
-});
 $('mic').addEventListener('click', () => { if (rec && rec.state === 'recording') parar(); else empezar(); });
 $('bAjustes').addEventListener('click', abrirAjustes);
 $('bVolver').addEventListener('click', cerrarAjustes);
