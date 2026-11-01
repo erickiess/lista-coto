@@ -113,6 +113,15 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 .item .m svg{width:14px;height:14px;flex:none;color:var(--warn)}
 .item.local .fg{background:var(--warnbg);border-color:transparent}
 .item .x{opacity:.55}
+.btnHist{display:block;width:100%;margin:18px 0 8px;min-height:48px;border-radius:16px;border:1.5px dashed var(--bd);background:none;color:var(--tx2);font:inherit;font-weight:600}
+.btnHist:active{background:var(--card2)}
+.hdia{margin:18px 0 4px}
+.hitem{display:flex;align-items:center;gap:8px;padding:6px 4px 6px 14px;margin:6px 0;background:var(--card);border:1px solid var(--bd);border-radius:14px;min-height:52px}
+.hitem .t{flex:1;min-width:0}
+.hitem .nom{font-weight:600;word-break:break-word}
+.hitem .q{margin-left:6px;color:var(--ac);font-size:13px;font-weight:700}
+.hitem .m{color:var(--tx2);font-size:12.5px}
+.hitem .re{flex:none;min-height:40px;padding:0 12px;border-radius:999px;border:0;background:var(--ac2);color:var(--ac);font:inherit;font-size:14px;font-weight:700}
 .vacioG{text-align:center;padding:36px 16px 16px;color:var(--tx2)}
 .vacioG .big{font-size:64px;line-height:1.1;animation:flota 3s ease-in-out infinite}
 .vacioG p{margin:8px 0 0;font-size:17px;color:var(--tx);font-weight:600}
@@ -200,7 +209,21 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
     </button>
   </div>
   <div id="lista"><div class="vacio">Cargando…</div></div>
+  <button class="btnHist" id="bHistorial">🕘 Historial de lo comprado</button>
 </main>
+
+<!-- Historial (hoja desde abajo) -->
+<div id="pHistorial" class="sheetwrap hide">
+  <div class="backdrop" id="bdHist"></div>
+  <div class="sheet" role="dialog" aria-label="Historial">
+    <div class="grip"></div>
+    <div class="cab">
+      <h2>Historial</h2>
+      <button class="ico" id="bCerrarHist" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="historial"><div class="vacio">Cargando…</div></div>
+  </div>
+</div>
 
 <!-- Ajustes (hoja desde abajo) -->
 <div id="pAjustes" class="sheetwrap hide ajustes">
@@ -369,6 +392,30 @@ function pintarLista() {
       h += '<div class="item' + (i.local ? ' local' : '') + '"><div class="fg"><div class="t"><span class="nom">' + esc(i.producto) + '</span>' +
         (i.cantidad ? '<span class="q">' + (/^\d+([.,]\d+)?$/.test(String(i.cantidad).trim()) ? '× ' : '') + esc(i.cantidad) + '</span>' : '') + '<div class="m">' + meta + '</div></div>' +
         '<button class="x" data-del="' + esc(i.id) + '" aria-label="Borrar">✕</button></div></div>';
+  });
+  el.innerHTML = h;
+}
+
+// ---------- Historial ----------
+let historial = lsGet('historial', []);
+function abrirHistorial() {
+  $('pHistorial').classList.remove('hide');
+  pintarHistorial();
+  if (configurado()) apiGet('historial').then((j) => { historial = j.items || []; lsSet('historial', historial); pintarHistorial(); })
+    .catch((e) => avisoTemp(e instanceof ErrRed ? 'Sin señal: muestro el último historial guardado.' : e.message));
+}
+function cerrarHistorial() { $('pHistorial').classList.add('hide'); }
+function pintarHistorial() {
+  const el = $('historial');
+  if (!historial.length) { el.innerHTML = '<div class="vacioG"><div class="big">🧾</div><p>Todavía no hay compras</p><small>Lo que se compra de la lista queda acá.</small></div>'; return; }
+  let h = '', dia = '';
+  historial.forEach((i, n) => {
+    const d = new Date(i.comprado_el);
+    const etq = isNaN(d) ? 'Sin fecha' : d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    if (etq !== dia) { dia = etq; h += '<div class="sub hdia">Comprado el ' + esc(etq) + '</div>'; }
+    h += '<div class="hitem"><div class="t"><span class="nom">' + esc(i.producto) + '</span>' + (i.cantidad ? '<span class="q">' + esc(i.cantidad) + '</span>' : '') +
+      '<div class="m">' + esc([i.quien, i.nota].filter(Boolean).join(' · ')) + '</div></div>' +
+      '<button class="re" data-re="' + n + '">+ Anotar</button></div>';
   });
   el.innerHTML = h;
 }
@@ -629,6 +676,16 @@ $('bdAj').addEventListener('click', cerrarAjustes);
 $('bGuardarAj').addEventListener('click', guardarAjustes);
 $('aQuien').addEventListener('change', () => $('aOtro').classList.toggle('hide', $('aQuien').value !== 'otro'));
 $('bRefrescar').addEventListener('click', refrescar);
+$('bHistorial').addEventListener('click', abrirHistorial);
+$('bCerrarHist').addEventListener('click', cerrarHistorial);
+$('bdHist').addEventListener('click', cerrarHistorial);
+$('historial').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-re]'); if (!b) return;
+  const i = historial[+b.dataset.re];
+  b.disabled = true;
+  try { await guardarItems([{ producto: i.producto, cantidad: i.cantidad, lugar: i.lugar, nota: i.nota }]); b.textContent = '✓ Anotado'; }
+  catch (err) { b.disabled = false; }
+});
 $('lista').addEventListener('click', (e) => { const b = e.target.closest('[data-del]'); if (b) borrar(b.dataset.del); });
 $('avisos').addEventListener('click', (e) => { if (e.target.id === 'bTransPend') transcribirPendientes(); });
 $('fichas').addEventListener('input', (e) => {
