@@ -100,9 +100,6 @@ h1{font-size:clamp(24px,7.4vw,28px);line-height:1.15;font-weight:700;margin:0;le
 /* lista */
 .lista-h{display:flex;justify-content:space-between;align-items:center;margin-top:22px}
 .lista-h .ico{min-width:44px}
-.grupo{margin:18px 0 6px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px}
-.grupo .e{font-size:20px}
-.grupo .k{margin-left:auto;font-size:13px;font-weight:700;color:var(--ac);background:var(--ac2);min-width:26px;height:24px;border-radius:12px;padding:0 8px;display:grid;place-items:center}
 .item{position:relative;border-radius:var(--r);margin:8px 0;animation:ent .28s ease both}
 .item.sw{background:var(--tom);overflow:hidden}
 .item:not(.sw)::after{display:none}
@@ -364,7 +361,7 @@ function pintarLista() {
   pintarCabecera(vis.length);
   if (!configurado()) { el.innerHTML = '<div class="vacioG"><div class="big">⚙️</div><p>Falta configurar</p><small>Tocá el ícono de ajustes arriba a la derecha.</small></div>'; return; }
   if (!vis.length) { el.innerHTML = '<div class="vacioG"><div class="big">🧺</div><p>No falta nada. ¡Despensa llena!</p></div>'; return; }
-  let h = '<div class="grupo"><span class="e">🛒</span>Lo que falta<span class="k">' + vis.length + '</span></div>';
+  let h = '';
   vis.forEach((i) => {
       const quien = [i.quien, tiempoRel(i.fecha)].filter(Boolean).join(' · ');
       const meta = (i.local ? SVG_NUBE : '') + '<span>' + esc(quien) + (i.local ? ' · sin enviar' : '') + (i.nota ? ' · ' + esc(i.nota) : '') + '</span>';
